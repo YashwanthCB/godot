@@ -137,6 +137,7 @@ void initialize_glslang_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_CORE) {
 		return;
 	}
+	//TODO: initialize glsl shader language info here
 
 	// Initialize in case it's not initialized. This is done once per thread
 	// and it's safe to call multiple times.
