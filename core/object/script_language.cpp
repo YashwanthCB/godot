@@ -48,7 +48,6 @@ bool ScriptServer::reload_scripts_on_save = false;
 ScriptEditRequestFunction ScriptServer::edit_request_func = nullptr;
 
 class Language* LanguageServer:: _languages[16];
-
 int LanguageServer::_language_count = 0;
 Mutex LanguageServer::languages_mutex;
 
