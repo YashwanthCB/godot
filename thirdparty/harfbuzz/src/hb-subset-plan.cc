@@ -418,8 +418,7 @@ _nameid_closure (hb_subset_plan_t* plan,
 		 hb_set_t* drop_tables)
 {
 #ifndef HB_NO_STYLE
-  if (!drop_tables->has (HB_OT_TAG_STAT))
-    plan->source->table.STAT->collect_name_ids (&plan->user_axes_location, &plan->name_ids);
+  plan->source->table.STAT->collect_name_ids (&plan->user_axes_location, &plan->name_ids);
 #endif
 #ifndef HB_NO_VAR
   if (!plan->all_axes_pinned)

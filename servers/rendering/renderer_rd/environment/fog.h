@@ -182,9 +182,6 @@ private:
 			uint32_t temporal_frame;
 			float temporal_blend;
 
-			float sky_border_size[2];
-			float pad[2];
-
 			float cam_rotation[12];
 			float to_prev_view[16];
 			float radiance_inverse_xform[12];
@@ -343,13 +340,13 @@ public:
 		~VolumetricFog();
 	};
 
-	void init_fog_shader(uint32_t p_max_directional_lights, int p_roughness_layers, bool p_is_using_radiance_octmap_array);
+	void init_fog_shader(uint32_t p_max_directional_lights, int p_roughness_layers, bool p_is_using_radiance_cubemap_array);
 	void free_fog_shader();
 
 	struct VolumetricFogSettings {
 		Vector2i rb_size;
 		double time;
-		bool is_using_radiance_octmap_array;
+		bool is_using_radiance_cubemap_array;
 		uint32_t max_cluster_elements;
 		bool volumetric_fog_filter_active;
 		RID shadow_sampler;

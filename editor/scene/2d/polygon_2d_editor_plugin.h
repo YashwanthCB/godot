@@ -35,7 +35,6 @@
 
 class AcceptDialog;
 class ButtonGroup;
-class EditorDock;
 class EditorZoomWidget;
 class HScrollBar;
 class HSlider;
@@ -84,7 +83,8 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 	Polygon2D *node = nullptr;
 	Polygon2D *previous_node = nullptr;
 
-	EditorDock *polygon_edit = nullptr;
+	Button *dock_button = nullptr;
+	VBoxContainer *polygon_edit = nullptr;
 	Mode current_mode = MODE_MAX; // Uninitialized.
 	Button *mode_buttons[MODE_MAX];
 	Action selected_action = ACTION_CREATE;

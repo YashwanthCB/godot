@@ -38,6 +38,7 @@ GODOT_GCC_WARNING_POP
 #include "thirdparty/misc/stb_rect_pack.h"
 
 const int clipper_precision = 5; // Based on CMP_EPSILON.
+const double clipper_scale = Math::pow(10.0, clipper_precision);
 
 void Geometry2D::merge_many_polygons(const Vector<Vector<Vector2>> &p_polygons, Vector<Vector<Vector2>> &r_out_polygons, Vector<Vector<Vector2>> &r_out_holes) {
 	using namespace Clipper2Lib;
@@ -350,7 +351,10 @@ Vector<Vector<Point2>> Geometry2D::_polypath_offset(const Vector<Point2> &p_poly
 	}
 
 	// Inflate/deflate.
-	PathsD paths = InflatePaths({ polypath }, p_delta, jt, et, 2.0, clipper_precision, 0.25);
+	PathsD paths = InflatePaths({ polypath }, p_delta, jt, et, 2.0, clipper_precision, 0.25 * clipper_scale);
+	// Here the points are scaled up internally and
+	// the arc_tolerance is scaled accordingly
+	// to attain the desired precision.
 
 	Vector<Vector<Point2>> polypaths;
 	polypaths.resize(paths.size());

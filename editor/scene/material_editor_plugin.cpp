@@ -52,6 +52,7 @@
 
 Ref<ShaderMaterial> MaterialEditor::make_shader_material(const Ref<Material> &p_from, bool p_copy_params) {
 	ERR_FAIL_COND_V(p_from.is_null(), Ref<ShaderMaterial>());
+	ERR_FAIL_COND_V(!p_from->_is_initialized(), Ref<ShaderMaterial>());
 
 	Ref<ShaderMaterial> smat;
 	smat.instantiate();
@@ -496,6 +497,5 @@ bool CanvasItemMaterialConversionPlugin::handles(const Ref<Resource> &p_resource
 }
 
 Ref<Resource> CanvasItemMaterialConversionPlugin::convert(const Ref<Resource> &p_resource) const {
-	ERR_FAIL_COND_V(!Object::cast_to<CanvasItemMaterial>(*p_resource) || !Object::cast_to<CanvasItemMaterial>(*p_resource)->_is_initialized(), Ref<CanvasItemMaterial>());
 	return MaterialEditor::make_shader_material(p_resource);
 }

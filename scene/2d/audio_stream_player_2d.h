@@ -48,6 +48,12 @@ private:
 
 	};
 
+	struct Output {
+		AudioFrame vol;
+		int bus_index = 0;
+		Viewport *viewport = nullptr; //pointer only used for reference to previous mix
+	};
+
 	AudioStreamPlayerInternal *internal = nullptr;
 
 	SafeNumeric<float> setplay{ -1.0 };

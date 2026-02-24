@@ -52,6 +52,9 @@ class ImportDock : public EditorDock {
 	MenuButton *preset = nullptr;
 	EditorInspector *import_opts = nullptr;
 
+	List<PropertyInfo> properties;
+	HashMap<StringName, Variant> property_values;
+
 	ConfirmationDialog *reimport_confirm = nullptr;
 	Label *cleanup_warning = nullptr;
 	Label *label_warning = nullptr;

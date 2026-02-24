@@ -55,7 +55,7 @@ public interface GodotRenderView {
 
 	void onActivityStarted();
 
-	boolean blockingExitRenderer(long blockingTimeInMs);
+	void onActivityDestroyed();
 
 	GodotInputHandler getInputHandler();
 

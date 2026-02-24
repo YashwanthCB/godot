@@ -220,15 +220,11 @@ void EmbeddedProcess::reset() {
 	embedding_completed = false;
 	start_embedding_time = 0;
 	embedding_grab_focus = false;
-	reset_timers();
+	timer_embedding->stop();
+	timer_update_embedded_process->stop();
 	set_process(false);
 	set_notify_transform(false);
 	queue_redraw();
-}
-
-void EmbeddedProcess::reset_timers() {
-	timer_embedding->stop();
-	timer_update_embedded_process->stop();
 }
 
 void EmbeddedProcess::request_close() {
@@ -420,7 +416,7 @@ void EmbeddedProcess::_check_focused_process_id() {
 			if (modal_window->get_mode() == Window::MODE_MINIMIZED) {
 				modal_window->set_mode(Window::MODE_WINDOWED);
 			}
-			callable_mp(modal_window, &Window::grab_focus).call_deferred();
+			callable_mp(modal_window, &Window::grab_focus).call_deferred(false);
 		}
 	}
 }

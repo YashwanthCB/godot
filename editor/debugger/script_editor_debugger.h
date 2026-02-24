@@ -107,7 +107,7 @@ private:
 		SAVE_MONITORS_CSV,
 		SAVE_VRAM_CSV,
 	};
-	FileDialogPurpose file_dialog_purpose = SAVE_MONITORS_CSV;
+	FileDialogPurpose file_dialog_purpose;
 
 	int error_count;
 	int warning_count;

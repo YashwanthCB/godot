@@ -30,11 +30,9 @@
 
 package org.godotengine.godot.io.file
 
-import android.content.ContentResolver
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import androidx.core.net.toUri
 import org.godotengine.godot.error.Error
 import org.godotengine.godot.io.StorageScope
 import java.io.FileNotFoundException
@@ -66,6 +64,7 @@ internal abstract class DataAccess {
 					val assetData = AssetData(context, filePath, FileAccessFlags.READ)
 					Channels.newInputStream(assetData.readChannel)
 				}
+
 				StorageScope.APP -> {
 					val fileData = FileData(filePath, FileAccessFlags.READ)
 					Channels.newInputStream(fileData.fileChannel)
@@ -77,10 +76,6 @@ internal abstract class DataAccess {
 					} else {
 						null
 					}
-				}
-				StorageScope.SAF -> {
-					val safData = SAFData(context, filePath, FileAccessFlags.READ)
-					Channels.newInputStream(safData.fileChannel)
 				}
 
 				StorageScope.UNKNOWN -> null
@@ -96,13 +91,14 @@ internal abstract class DataAccess {
 		): DataAccess? {
 			return when (storageScope) {
 				StorageScope.APP -> FileData(filePath, accessFlag)
+
 				StorageScope.ASSETS -> AssetData(context, filePath, accessFlag)
+
 				StorageScope.SHARED -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 					MediaStoreData(context, filePath, accessFlag)
 				} else {
 					null
 				}
-				StorageScope.SAF -> SAFData(context, filePath, accessFlag)
 
 				StorageScope.UNKNOWN -> null
 			}
@@ -117,7 +113,6 @@ internal abstract class DataAccess {
 				} else {
 					false
 				}
-				StorageScope.SAF -> SAFData.fileExists(context, path)
 
 				StorageScope.UNKNOWN -> false
 			}
@@ -132,7 +127,6 @@ internal abstract class DataAccess {
 				} else {
 					0L
 				}
-				StorageScope.SAF -> SAFData.fileLastModified(context, path)
 
 				StorageScope.UNKNOWN -> 0L
 			}
@@ -142,7 +136,8 @@ internal abstract class DataAccess {
 			return when(storageScope) {
 				StorageScope.APP -> FileData.fileLastAccessed(path)
 				StorageScope.ASSETS -> AssetData.fileLastAccessed(path)
-				StorageScope.SHARED, StorageScope.SAF, StorageScope.UNKNOWN -> 0L
+				StorageScope.SHARED -> MediaStoreData.fileLastAccessed(context, path)
+				StorageScope.UNKNOWN -> 0L
 			}
 		}
 
@@ -150,13 +145,7 @@ internal abstract class DataAccess {
 			return when(storageScope) {
 				StorageScope.APP -> FileData.fileSize(path)
 				StorageScope.ASSETS -> AssetData.fileSize(path)
-				StorageScope.SHARED -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-					MediaStoreData.fileSize(context, path)
-				} else {
-					-1L
-				}
-				StorageScope.SAF -> SAFData.fileSize(context, path)
-
+				StorageScope.SHARED -> MediaStoreData.fileSize(context, path)
 				StorageScope.UNKNOWN -> -1L
 			}
 		}
@@ -170,7 +159,6 @@ internal abstract class DataAccess {
 				} else {
 					false
 				}
-				StorageScope.SAF -> SAFData.delete(context, path)
 
 				StorageScope.UNKNOWN -> false
 			}
@@ -185,7 +173,6 @@ internal abstract class DataAccess {
 				} else {
 					false
 				}
-				StorageScope.SAF -> SAFData.rename(context, from, to)
 
 				StorageScope.UNKNOWN -> false
 			}

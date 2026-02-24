@@ -1074,19 +1074,6 @@ void GDScript::_bind_methods() {
 	ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "new", &GDScript::_new, MethodInfo("new"));
 }
 
-void GDScript::set_path_cache(const String &p_path) {
-	if (is_root_script()) {
-		Script::set_path_cache(p_path);
-	}
-
-	path = p_path;
-	path_valid = true;
-
-	for (KeyValue<StringName, Ref<GDScript>> &kv : subclasses) {
-		kv.value->set_path_cache(p_path);
-	}
-}
-
 void GDScript::set_path(const String &p_path, bool p_take_over) {
 	if (is_root_script()) {
 		Script::set_path(p_path, p_take_over);
@@ -1095,9 +1082,7 @@ void GDScript::set_path(const String &p_path, bool p_take_over) {
 	String old_path = path;
 	path = p_path;
 	path_valid = true;
-	if (is_root_script()) {
-		GDScriptCache::move_script(old_path, p_path);
-	}
+	GDScriptCache::move_script(old_path, p_path);
 
 	for (KeyValue<StringName, Ref<GDScript>> &kv : subclasses) {
 		kv.value->set_path(p_path, p_take_over);
@@ -1263,6 +1248,69 @@ GDScript *GDScript::get_root_script() {
 	return result;
 }
 
+RBSet<GDScript *> GDScript::get_dependencies() {
+	RBSet<GDScript *> dependencies;
+
+	_collect_dependencies(dependencies, this);
+	dependencies.erase(this);
+
+	return dependencies;
+}
+
+HashMap<GDScript *, RBSet<GDScript *>> GDScript::get_all_dependencies() {
+	HashMap<GDScript *, RBSet<GDScript *>> all_dependencies;
+
+	List<GDScript *> scripts;
+	{
+		MutexLock lock(GDScriptLanguage::singleton->mutex);
+
+		SelfList<GDScript> *elem = GDScriptLanguage::singleton->script_list.first();
+		while (elem) {
+			scripts.push_back(elem->self());
+			elem = elem->next();
+		}
+	}
+
+	for (GDScript *scr : scripts) {
+		if (scr == nullptr || scr->destructing) {
+			continue;
+		}
+		all_dependencies.insert(scr, scr->get_dependencies());
+	}
+
+	return all_dependencies;
+}
+
+RBSet<GDScript *> GDScript::get_must_clear_dependencies() {
+	RBSet<GDScript *> dependencies = get_dependencies();
+	RBSet<GDScript *> must_clear_dependencies;
+	HashMap<GDScript *, RBSet<GDScript *>> all_dependencies = get_all_dependencies();
+
+	RBSet<GDScript *> cant_clear;
+	for (KeyValue<GDScript *, RBSet<GDScript *>> &E : all_dependencies) {
+		if (dependencies.has(E.key)) {
+			continue;
+		}
+		for (GDScript *F : E.value) {
+			if (dependencies.has(F)) {
+				cant_clear.insert(F);
+			}
+		}
+	}
+
+	for (GDScript *E : dependencies) {
+		if (cant_clear.has(E) || ScriptServer::is_global_class(E->get_fully_qualified_name())) {
+			continue;
+		}
+		must_clear_dependencies.insert(E);
+	}
+
+	cant_clear.clear();
+	dependencies.clear();
+	all_dependencies.clear();
+	return must_clear_dependencies;
+}
+
 bool GDScript::has_script_signal(const StringName &p_signal) const {
 	if (_signals.has(p_signal)) {
 		return true;
@@ -1301,6 +1349,67 @@ void GDScript::get_script_signal_list(List<MethodInfo> *r_signals) const {
 	_get_script_signal_list(r_signals, true);
 }
 
+GDScript *GDScript::_get_gdscript_from_variant(const Variant &p_variant) {
+	Object *obj = p_variant;
+	if (obj == nullptr || obj->get_instance_id().is_null()) {
+		return nullptr;
+	}
+	return Object::cast_to<GDScript>(obj);
+}
+
+void GDScript::_collect_function_dependencies(GDScriptFunction *p_func, RBSet<GDScript *> &p_dependencies, const GDScript *p_except) {
+	if (p_func == nullptr) {
+		return;
+	}
+	for (GDScriptFunction *lambda : p_func->lambdas) {
+		_collect_function_dependencies(lambda, p_dependencies, p_except);
+	}
+	for (const Variant &V : p_func->constants) {
+		GDScript *scr = _get_gdscript_from_variant(V);
+		if (scr != nullptr && scr != p_except) {
+			scr->_collect_dependencies(p_dependencies, p_except);
+		}
+	}
+}
+
+void GDScript::_collect_dependencies(RBSet<GDScript *> &p_dependencies, const GDScript *p_except) {
+	if (p_dependencies.has(this)) {
+		return;
+	}
+	if (this != p_except) {
+		p_dependencies.insert(this);
+	}
+
+	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
+		_collect_function_dependencies(E.value, p_dependencies, p_except);
+	}
+
+	if (implicit_initializer) {
+		_collect_function_dependencies(implicit_initializer, p_dependencies, p_except);
+	}
+
+	if (implicit_ready) {
+		_collect_function_dependencies(implicit_ready, p_dependencies, p_except);
+	}
+
+	if (static_initializer) {
+		_collect_function_dependencies(static_initializer, p_dependencies, p_except);
+	}
+
+	for (KeyValue<StringName, Ref<GDScript>> &E : subclasses) {
+		if (E.value != p_except) {
+			E.value->_collect_dependencies(p_dependencies, p_except);
+		}
+	}
+
+	for (const KeyValue<StringName, Variant> &E : constants) {
+		GDScript *scr = _get_gdscript_from_variant(E.value);
+		if (scr != nullptr && scr != p_except) {
+			scr->_collect_dependencies(p_dependencies, p_except);
+		}
+	}
+}
+
 GDScript::GDScript() :
 		script_list(this) {
 	{
@@ -1312,7 +1421,7 @@ GDScript::GDScript() :
 	path = vformat("gdscript://%d.gd", get_instance_id());
 }
 
-void GDScript::_save_orphaned_subclasses() {
+void GDScript::_save_orphaned_subclasses(ClearData *p_clear_data) {
 	struct ClassRefWithName {
 		ObjectID id;
 		String fully_qualified_name;
@@ -1328,8 +1437,17 @@ void GDScript::_save_orphaned_subclasses() {
 	}
 
 	// clear subclasses to allow unused subclasses to be deleted
+	for (KeyValue<StringName, Ref<GDScript>> &E : subclasses) {
+		p_clear_data->scripts.insert(E.value);
+	}
 	subclasses.clear();
 	// subclasses are also held by constants, clear those as well
+	for (KeyValue<StringName, Variant> &E : constants) {
+		GDScript *gdscr = _get_gdscript_from_variant(E.value);
+		if (gdscr != nullptr) {
+			p_clear_data->scripts.insert(gdscr);
+		}
+	}
 	constants.clear();
 
 	// keep orphan subclass only for subclasses that are still in use
@@ -1415,13 +1533,22 @@ void GDScript::_recurse_replace_function_ptrs(const HashMap<GDScriptFunction *, 
 	}
 }
 
-void GDScript::clear() {
+void GDScript::clear(ClearData *p_clear_data) {
 	if (clearing) {
 		return;
 	}
 	clearing = true;
 
-	RBSet<GDScriptFunction *> functions_to_clear;
+	ClearData data;
+	ClearData *clear_data = p_clear_data;
+	bool is_root = false;
+
+	// If `clear_data` is `nullptr`, it means that it's the root.
+	// The root is in charge to clear functions and scripts of itself and its dependencies
+	if (clear_data == nullptr) {
+		clear_data = &data;
+		is_root = true;
+	}
 
 	{
 		MutexLock lock(func_ptrs_to_update_mutex);
@@ -1430,35 +1557,49 @@ void GDScript::clear() {
 		}
 	}
 
+	// If we're in the process of shutting things down then every single script will be cleared
+	// anyway, so we can safely skip this very costly operation.
+	if (!GDScriptLanguage::singleton->finishing) {
+		RBSet<GDScript *> must_clear_dependencies = get_must_clear_dependencies();
+		for (GDScript *E : must_clear_dependencies) {
+			clear_data->scripts.insert(E);
+			E->clear(clear_data);
+		}
+	}
+
 	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
-		functions_to_clear.insert(E.value);
+		clear_data->functions.insert(E.value);
 	}
 	member_functions.clear();
 
 	for (KeyValue<StringName, MemberInfo> &E : member_indices) {
+		clear_data->scripts.insert(E.value.data_type.script_type_ref);
 		E.value.data_type.script_type_ref = Ref<Script>();
 	}
 
-	member_indices.clear();
+	for (KeyValue<StringName, MemberInfo> &E : static_variables_indices) {
+		clear_data->scripts.insert(E.value.data_type.script_type_ref);
+		E.value.data_type.script_type_ref = Ref<Script>();
+	}
 	static_variables.clear();
 	static_variables_indices.clear();
 
 	if (implicit_initializer) {
-		functions_to_clear.insert(implicit_initializer);
+		clear_data->functions.insert(implicit_initializer);
 		implicit_initializer = nullptr;
 	}
 
 	if (implicit_ready) {
-		functions_to_clear.insert(implicit_ready);
+		clear_data->functions.insert(implicit_ready);
 		implicit_ready = nullptr;
 	}
 
 	if (static_initializer) {
-		functions_to_clear.insert(static_initializer);
+		clear_data->functions.insert(static_initializer);
 		static_initializer = nullptr;
 	}
 
-	_save_orphaned_subclasses();
+	_save_orphaned_subclasses(clear_data);
 
 #ifdef TOOLS_ENABLED
 	// Clearing inner class doc, script doc only cleared when the script source deleted.
@@ -1467,11 +1608,20 @@ void GDScript::clear() {
 	}
 #endif
 
-	// All dependencies have been accounted for
-	for (GDScriptFunction *E : functions_to_clear) {
-		memdelete(E);
+	// If it's not the root, skip clearing the data
+	if (is_root) {
+		// All dependencies have been accounted for
+		for (GDScriptFunction *E : clear_data->functions) {
+			memdelete(E);
+		}
+		for (Ref<Script> &E : clear_data->scripts) {
+			Ref<GDScript> gdscr = E;
+			if (gdscr.is_valid()) {
+				GDScriptCache::remove_script(gdscr->get_path());
+			}
+		}
+		clear_data->clear();
 	}
-	functions_to_clear.clear();
 }
 
 void GDScript::cancel_pending_functions(bool warn) {
@@ -2667,17 +2817,6 @@ bool GDScriptLanguage::handles_global_class_type(const String &p_type) const {
 }
 
 String GDScriptLanguage::get_global_class_name(const String &p_path, String *r_base_type, String *r_icon_path, bool *r_is_abstract, bool *r_is_tool) const {
-	LocalVector<String> r_vec;
-	return _get_global_class_name(p_path, r_base_type, r_icon_path, r_is_abstract, r_is_tool, r_vec);
-}
-
-String GDScriptLanguage::_get_global_class_name(const String &p_path, String *r_base_type, String *r_icon_path, bool *r_is_abstract, bool *r_is_tool, LocalVector<String> &r_visited) const {
-	if (r_visited.has(p_path)) {
-		return String();
-	}
-
-	r_visited.push_back(p_path);
-
 	Error err;
 	Ref<FileAccess> f = FileAccess::open(p_path, FileAccess::READ, &err);
 	if (err) {
@@ -2717,7 +2856,7 @@ String GDScriptLanguage::_get_global_class_name(const String &p_path, String *r_
 				if (!subclass->extends_path.is_empty()) {
 					if (subclass->extends.is_empty()) {
 						// We only care about the referenced class_name.
-						_ALLOW_DISCARD_ _get_global_class_name(subclass->extends_path, r_base_type, nullptr, nullptr, nullptr, r_visited);
+						_ALLOW_DISCARD_ get_global_class_name(subclass->extends_path, r_base_type);
 						subclass = nullptr;
 						break;
 					} else {

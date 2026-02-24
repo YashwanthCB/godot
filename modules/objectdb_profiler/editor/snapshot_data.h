@@ -33,6 +33,7 @@
 #include "editor/debugger/editor_debugger_inspector.h"
 
 class GameStateSnapshot;
+class GameStateSnapshotRef;
 
 class SnapshotDataObject : public Object {
 	GDCLASS(SnapshotDataObject, Object);
@@ -76,8 +77,8 @@ protected:
 	static void _bind_methods();
 };
 
-class GameStateSnapshot : public RefCounted {
-	GDCLASS(GameStateSnapshot, RefCounted);
+class GameStateSnapshot : public Object {
+	GDCLASS(GameStateSnapshot, Object);
 
 	void _get_outbound_references(Variant &p_var, HashMap<String, ObjectID> &r_ret_val, const String &p_current_path = "");
 	void _get_rc_cycles(SnapshotDataObject *p_obj, SnapshotDataObject *p_source_obj, HashSet<SnapshotDataObject *> p_traversed_objs, LocalVector<String> &r_ret_val, const String &p_current_path = "");
@@ -87,8 +88,24 @@ public:
 	HashMap<ObjectID, SnapshotDataObject *> objects;
 	Dictionary snapshot_context;
 
-	static Ref<GameStateSnapshot> create_ref(const String &p_snapshot_name, const Vector<uint8_t> &p_snapshot_buffer);
+	// Ideally, this would extend EditorDebuggerRemoteObject and be refcounted, but we can't have it both ways.
+	// So, instead we have this static 'constructor' that returns a RefCounted wrapper around a GameStateSnapshot.
+	static Ref<GameStateSnapshotRef> create_ref(const String &p_snapshot_name, const Vector<uint8_t> &p_snapshot_buffer);
 	~GameStateSnapshot();
 
 	void recompute_references();
+};
+
+// Thin RefCounted wrapper around a GameStateSnapshot.
+class GameStateSnapshotRef : public RefCounted {
+	GDCLASS(GameStateSnapshotRef, RefCounted);
+
+	GameStateSnapshot *gamestate_snapshot = nullptr;
+
+public:
+	GameStateSnapshotRef(GameStateSnapshot *p_gss) :
+			gamestate_snapshot(p_gss) {}
+
+	bool unreference();
+	GameStateSnapshot *get_snapshot();
 };

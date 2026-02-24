@@ -61,6 +61,21 @@ int main(int argc, char **argv) {
 	bool is_embedded = false;
 	bool is_headless = false;
 
+	const char *headless_args[] = {
+		"--headless",
+		"-h",
+		"--help",
+		"/?",
+		"--version",
+		"--dump-gdextension-interface",
+		"--dump-extension-api",
+		"--dump-extension-api-with-docs",
+		"--validate-extension-api",
+		"--convert-3to4",
+		"--validate-conversion-3to4",
+		"--doctool",
+	};
+
 	for (int i = 0; i < argc; i++) {
 		if (strcmp("-NSDocumentRevisionsDebugMode", argv[i]) == 0) {
 			// remove "-NSDocumentRevisionsDebugMode" and the next argument
@@ -79,8 +94,8 @@ int main(int argc, char **argv) {
 		if (strcmp("--embedded", argv[i]) == 0) {
 			is_embedded = true;
 		}
-		for (size_t j = 0; j < std::size(OS_MacOS::headless_args); j++) {
-			if (strcmp(OS_MacOS::headless_args[j], argv[i]) == 0) {
+		for (size_t j = 0; j < std::size(headless_args); j++) {
+			if (strcmp(headless_args[j], argv[i]) == 0) {
 				is_headless = true;
 				break;
 			}
@@ -98,7 +113,7 @@ int main(int argc, char **argv) {
 
 	OS_MacOS *os = nullptr;
 	if (is_embedded) {
-#ifdef TOOLS_ENABLED
+#ifdef DEBUG_ENABLED
 		os = memnew(OS_MacOS_Embedded(args[0], remaining_args, remaining_args > 0 ? &args[1] : nullptr));
 #else
 		WARN_PRINT("Embedded mode is not supported in release builds.");
@@ -132,12 +147,9 @@ int main(int argc, char **argv) {
 
 	os->run();
 
-	// Note: `os->run()` will never return if `OS_MacOS_NSApp` is used. Use `OS_MacOS_NSApp::cleanup()` for cleanup.
-
 	int exit_code = os->get_exit_code();
 
 	memdelete(os);
 
-	godot_cleanup_profiler();
 	return exit_code;
 }

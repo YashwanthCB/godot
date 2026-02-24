@@ -55,11 +55,13 @@ class GodotVulkanRenderView extends VkSurfaceView implements GodotRenderView {
 	private final GodotInputHandler mInputHandler;
 	private final VkRenderer mRenderer;
 	private final SparseArray<PointerIcon> customPointerIcons = new SparseArray<>();
+	private final boolean isXrDevice;
 
 	public GodotVulkanRenderView(Godot godot, GodotInputHandler inputHandler, boolean shouldBeTranslucent) {
 		super(godot.getContext());
 
 		this.godot = godot;
+		isXrDevice = godot.hasFeature("xr_runtime");
 		mInputHandler = inputHandler;
 		mRenderer = new VkRenderer();
 		setPointerIcon(PointerIcon.getSystemIcon(getContext(), PointerIcon.TYPE_DEFAULT));
@@ -115,8 +117,8 @@ class GodotVulkanRenderView extends VkSurfaceView implements GodotRenderView {
 	}
 
 	@Override
-	public boolean blockingExitRenderer(long blockingTimeInMs) {
-		return requestRenderThreadExitAndWait(blockingTimeInMs);
+	public void onActivityDestroyed() {
+		requestRenderThreadExitAndWait();
 	}
 
 	@Override
@@ -154,7 +156,7 @@ class GodotVulkanRenderView extends VkSurfaceView implements GodotRenderView {
 	@Override
 	public boolean canCapturePointer() {
 		// Pointer capture is not supported on XR devices.
-		return !godot.isXrRuntime() && mInputHandler.canCapturePointer();
+		return !isXrDevice && mInputHandler.canCapturePointer();
 	}
 	@Override
 	public void requestPointerCapture() {

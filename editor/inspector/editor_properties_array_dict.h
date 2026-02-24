@@ -240,6 +240,7 @@ class EditorPropertyDictionary : public EditorProperty {
 	PanelContainer *container = nullptr;
 	VBoxContainer *property_vbox = nullptr;
 	PanelContainer *add_panel = nullptr;
+	EditorSpinSlider *size_sliderv = nullptr;
 	Button *button_add_item = nullptr;
 	EditorPaginator *paginator = nullptr;
 	LocalVector<Slot> slots;

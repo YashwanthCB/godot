@@ -44,8 +44,7 @@ void EditorExportPlatformPC::get_preset_features(const Ref<EditorExportPreset> &
 		r_features->push_back("etc2");
 		r_features->push_back("astc");
 	}
-	if (!p_preset->is_dedicated_server() && p_preset->get("shader_baker/enabled")) {
-		// Don't use the shader baker if exporting as a dedicated server, as no rendering is performed.
+	if (p_preset->get("shader_baker/enabled")) {
 		r_features->push_back("shader_baker");
 	}
 	// PC platforms only have one architecture per export, since

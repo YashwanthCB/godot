@@ -100,7 +100,7 @@ class SceneTreeEditor : public Control {
 		SceneTreeEditor *editor;
 		HashMap<Node *, CachedNode> cache;
 		HashSet<CachedNode *> to_delete;
-		ObjectID current_scene_id;
+		Node *current_scene_node = nullptr;
 		Node *current_pinned_node = nullptr;
 		bool current_has_pin = false;
 		bool force_update = false;
@@ -111,6 +111,7 @@ class SceneTreeEditor : public Control {
 
 	Tree *tree = nullptr;
 	Node *selected = nullptr;
+	ObjectID instance_node;
 
 	String filter;
 	String filter_term_warning;

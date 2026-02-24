@@ -53,7 +53,6 @@ enum GlobalMenuCheckType {
 	Key accel;
 	GlobalMenuCheckType checkable_type;
 	bool checked;
-	bool enabled;
 	int max_states;
 	int state;
 	Ref<Image> img;

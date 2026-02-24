@@ -118,7 +118,6 @@ public:
 	void embed_process(OS::ProcessID p_pid) override;
 	int get_embedded_pid() const override { return current_process_id; }
 	void reset() override;
-	void reset_timers() override {}
 	void request_close() override;
 	void queue_update_embedded_process() override { update_embedded_process(); }
 

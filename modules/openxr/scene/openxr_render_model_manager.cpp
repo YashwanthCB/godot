@@ -30,9 +30,7 @@
 
 #include "openxr_render_model_manager.h"
 
-#ifdef MODULE_GLTF_ENABLED
 #include "../extensions/openxr_render_model_extension.h"
-
 #include "../openxr_api.h"
 #include "core/config/project_settings.h"
 #include "scene/3d/xr/xr_nodes.h"
@@ -284,4 +282,3 @@ void OpenXRRenderModelManager::set_make_local_to_pose(const String &p_action) {
 String OpenXRRenderModelManager::get_make_local_to_pose() const {
 	return make_local_to_pose;
 }
-#endif // MODULE_GLTF_ENABLED

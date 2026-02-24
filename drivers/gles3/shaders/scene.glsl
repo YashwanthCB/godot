@@ -48,12 +48,6 @@ RENDER_MOTION_VECTORS = false
 #define SHADER_IS_SRGB true
 #define SHADER_SPACE_FAR -1.0
 
-#ifdef USE_MULTIVIEW
-#define OUTPUT_IS_MULTIVIEW true
-#else
-#define OUTPUT_IS_MULTIVIEW false
-#endif
-
 #if defined(RENDER_SHADOWS) || defined(RENDER_SHADOWS_LINEAR)
 #define IN_SHADOW_PASS true
 #else
@@ -204,7 +198,7 @@ struct SceneData {
 	float fog_aerial_perspective;
 	float time;
 
-	mat3x4 radiance_inverse_xform;
+	mat3 radiance_inverse_xform;
 
 	uint directional_light_count;
 	float z_far;
@@ -230,18 +224,11 @@ struct SceneData {
 	bool pancake_shadows;
 };
 
-// The containing data block is for historic reasons.
 layout(std140) uniform SceneDataBlock { // ubo:2
 	SceneData data;
+	SceneData prev_data;
 }
 scene_data_block;
-
-#ifdef RENDER_MOTION_VECTORS
-layout(std140) uniform PrevSceneDataBlock { // ubo:12
-	SceneData data;
-}
-prev_scene_data_block;
-#endif
 
 #ifndef RENDER_MOTION_VECTORS
 #ifdef USE_ADDITIVE_LIGHTING
@@ -469,17 +456,10 @@ struct MultiviewData {
 
 layout(std140) uniform MultiviewDataBlock { // ubo:8
 	MultiviewData data;
+	MultiviewData prev_data;
 }
 multiview_data_block;
-
-#ifdef RENDER_MOTION_VECTORS
-layout(std140) uniform PrevMultiviewDataBlock { // ubo:13
-	MultiviewData data;
-}
-prev_multiview_data_block;
-#endif // RENDER_MOTION_VECTORS
-
-#endif // USE_MULTIVIEW
+#endif
 
 uniform highp mat4 world_transform;
 uniform highp vec3 compressed_aabb_position;
@@ -921,7 +901,7 @@ void main() {
 			compressed_aabb_position,
 			prev_world_transform,
 			model_flags,
-			prev_scene_data_block.data,
+			scene_data_block.prev_data,
 #ifdef USE_INSTANCING
 			input_instance_xform0, input_instance_xform1, input_instance_xform2,
 			input_instance_color_custom_data,
@@ -939,9 +919,9 @@ void main() {
 			uv2_attrib,
 #endif
 #ifdef USE_MULTIVIEW
-			prev_multiview_data_block.data.projection_matrix_view[ViewIndex],
-			prev_multiview_data_block.data.inv_projection_matrix_view[ViewIndex],
-			prev_multiview_data_block.data.eye_offset[ViewIndex].xyz,
+			multiview_data_block.prev_data.projection_matrix_view[ViewIndex],
+			multiview_data_block.prev_data.inv_projection_matrix_view[ViewIndex],
+			multiview_data_block.prev_data.eye_offset[ViewIndex].xyz,
 #endif
 			uv_scale,
 			prev_clip_position);
@@ -1026,12 +1006,6 @@ void main() {
 
 #define SHADER_IS_SRGB true
 #define SHADER_SPACE_FAR -1.0
-
-#ifdef USE_MULTIVIEW
-#define OUTPUT_IS_MULTIVIEW true
-#else
-#define OUTPUT_IS_MULTIVIEW false
-#endif
 
 #if defined(RENDER_SHADOWS) || defined(RENDER_SHADOWS_LINEAR)
 #define IN_SHADOW_PASS true
@@ -1172,7 +1146,7 @@ struct SceneData {
 	float fog_aerial_perspective;
 	float time;
 
-	mat3x4 radiance_inverse_xform;
+	mat3 radiance_inverse_xform;
 
 	uint directional_light_count;
 	float z_far;
@@ -1200,6 +1174,7 @@ struct SceneData {
 
 layout(std140) uniform SceneDataBlock { // ubo:2
 	SceneData data;
+	SceneData prev_data;
 }
 scene_data_block;
 
@@ -1212,6 +1187,7 @@ struct MultiviewData {
 
 layout(std140) uniform MultiviewDataBlock { // ubo:8
 	MultiviewData data;
+	MultiviewData prev_data;
 }
 multiview_data_block;
 #endif
@@ -2026,7 +2002,9 @@ void main() {
 #ifdef PREMUL_ALPHA_USED
 	float premul_alpha = 1.0;
 #endif // PREMUL_ALPHA_USED
+#ifndef FOG_DISABLED
 	vec4 fog = vec4(0.0);
+#endif // !FOG_DISABLED
 #if defined(CUSTOM_RADIANCE_USED)
 	vec4 custom_radiance = vec4(0.0);
 #endif
@@ -2227,7 +2205,7 @@ void main() {
 #endif
 		ref_vec = mix(ref_vec, normal, roughness * roughness);
 		float horizon = min(1.0 + dot(ref_vec, normal), 1.0);
-		ref_vec = mat3(scene_data_block.data.radiance_inverse_xform) * ref_vec;
+		ref_vec = scene_data_block.data.radiance_inverse_xform * ref_vec;
 		specular_light = textureLod(radiance_map, ref_vec, sqrt(roughness) * RADIANCE_MAX_LOD).rgb;
 		specular_light = srgb_to_linear(specular_light);
 		specular_light *= horizon * horizon;
@@ -2272,7 +2250,7 @@ void main() {
 
 #ifdef USE_RADIANCE_MAP
 		if (scene_data_block.data.use_ambient_cubemap) {
-			vec3 ambient_dir = mat3(scene_data_block.data.radiance_inverse_xform) * normal;
+			vec3 ambient_dir = scene_data_block.data.radiance_inverse_xform * normal;
 			vec3 cubemap_ambient = textureLod(radiance_map, ambient_dir, RADIANCE_MAX_LOD).rgb;
 			cubemap_ambient = srgb_to_linear(cubemap_ambient);
 			ambient_light = mix(ambient_light, cubemap_ambient * scene_data_block.data.ambient_light_color_energy.a, scene_data_block.data.ambient_color_sky_mix);
@@ -2556,7 +2534,7 @@ void main() {
 	// Tonemap before writing as we are writing to an sRGB framebuffer
 	frag_color.rgb *= exposure;
 #ifdef APPLY_TONEMAPPING
-	frag_color.rgb = apply_tonemapping(frag_color.rgb);
+	frag_color.rgb = apply_tonemapping(frag_color.rgb, white);
 #endif
 	frag_color.rgb = linear_to_srgb(frag_color.rgb);
 
@@ -2828,7 +2806,7 @@ void main() {
 	// Tonemap before writing as we are writing to an sRGB framebuffer
 	additive_light_color *= exposure;
 #ifdef APPLY_TONEMAPPING
-	additive_light_color = apply_tonemapping(additive_light_color);
+	additive_light_color = apply_tonemapping(additive_light_color, white);
 #endif
 	additive_light_color = linear_to_srgb(additive_light_color);
 

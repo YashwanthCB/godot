@@ -341,13 +341,12 @@ void Particles2DEditorPlugin::_selection_changed() {
 	}
 
 	// Turn gizmos on for nodes that are newly selected.
-	HashSet<ObjectID> nodes_in_current_selection;
+	HashSet<const Node *> nodes_in_current_selection;
 	for (Node *node : current_selection) {
-		ObjectID nid = node->get_instance_id();
-		nodes_in_current_selection.insert(nid);
-		if (!selected_particles.has(nid)) {
+		nodes_in_current_selection.insert(node);
+		if (!selected_particles.has(node)) {
 			_set_show_gizmos(node, true);
-			selected_particles.insert(nid);
+			selected_particles.insert(node);
 		}
 	}
 
@@ -359,24 +358,21 @@ void Particles2DEditorPlugin::_selection_changed() {
 	direction_img_path_line_edit->set_text("");
 
 	// Turn gizmos off for nodes that are no longer selected.
-	LocalVector<ObjectID> to_erase;
-	for (const ObjectID &nid : selected_particles) {
-		if (!nodes_in_current_selection.has(nid)) {
-			Node *node = ObjectDB::get_instance<Node>(nid);
-			if (node) {
-				_set_show_gizmos(node, false);
-			}
-			to_erase.push_back(nid);
+	LocalVector<Node *> to_erase;
+	for (Node *node : selected_particles) {
+		if (!nodes_in_current_selection.has(node)) {
+			_set_show_gizmos(node, false);
+			to_erase.push_back(node);
 		}
 	}
 
-	for (const ObjectID &nid : to_erase) {
-		selected_particles.erase(nid);
+	for (Node *node : to_erase) {
+		selected_particles.erase(node);
 	}
 }
 
 void Particles2DEditorPlugin::_node_removed(Node *p_node) {
-	if (p_node && selected_particles.erase(p_node->get_instance_id())) {
+	if (selected_particles.erase(p_node)) {
 		_set_show_gizmos(p_node, false);
 	}
 }

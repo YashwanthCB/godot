@@ -47,7 +47,6 @@ void QuickSettingsDialog::_fetch_setting_values() {
 #ifndef ANDROID_ENABLED
 	editor_languages.clear();
 #endif
-	editor_styles.clear();
 	editor_themes.clear();
 	editor_scales.clear();
 	editor_network_modes.clear();
@@ -63,8 +62,6 @@ void QuickSettingsDialog::_fetch_setting_values() {
 #ifndef ANDROID_ENABLED
 				editor_languages = pi.hint_string.split(";", false);
 #endif
-			} else if (pi.name == "interface/theme/style") {
-				editor_styles = pi.hint_string.split(",");
 			} else if (pi.name == "interface/theme/color_preset") {
 				editor_themes = pi.hint_string.split(",");
 			} else if (pi.name == "interface/editor/display_scale") {
@@ -96,17 +93,6 @@ void QuickSettingsDialog::_update_current_values() {
 		}
 	}
 #endif
-	// Style options.
-	{
-		const String current_style = EDITOR_GET("interface/theme/style");
-
-		for (int i = 0; i < editor_styles.size(); i++) {
-			const String &style_value = editor_styles[i];
-			if (current_style == style_value) {
-				style_option_button->select(i);
-			}
-		}
-	}
 
 	// Theme options.
 	{
@@ -189,6 +175,7 @@ void QuickSettingsDialog::_add_setting_control(const String &p_text, Control *p_
 	container->add_child(label);
 
 	p_control->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	p_control->set_stretch_ratio(2.0);
 	container->add_child(p_control);
 }
 
@@ -198,11 +185,6 @@ void QuickSettingsDialog::_language_selected(int p_id) {
 	_set_setting_value("interface/editor/editor_language", selected_language);
 }
 #endif
-
-void QuickSettingsDialog::_style_selected(int p_id) {
-	const String selected_style = style_option_button->get_item_text(p_id);
-	_set_setting_value("interface/theme/style", selected_style);
-}
 
 void QuickSettingsDialog::_theme_selected(int p_id) {
 	const String selected_theme = theme_option_button->get_item_text(p_id);
@@ -335,19 +317,6 @@ QuickSettingsDialog::QuickSettingsDialog() {
 			_add_setting_control(TTRC("Language"), language_option_button);
 		}
 #endif
-		// Style options.
-		{
-			style_option_button = memnew(OptionButton);
-			style_option_button->set_fit_to_longest_item(false);
-			style_option_button->connect(SceneStringName(item_selected), callable_mp(this, &QuickSettingsDialog::_style_selected));
-
-			for (int i = 0; i < editor_styles.size(); i++) {
-				const String &style_value = editor_styles[i];
-				style_option_button->add_item(style_value, i);
-			}
-
-			_add_setting_control(TTRC("Style"), style_option_button);
-		}
 
 		// Theme options.
 		{

@@ -73,9 +73,6 @@ public:
 class DependencyEditorOwners : public AcceptDialog {
 	GDCLASS(DependencyEditorOwners, AcceptDialog);
 
-	Label *owners_count = nullptr;
-	Label *empty = nullptr;
-	MarginContainer *owners_mc = nullptr;
 	ItemList *owners = nullptr;
 	PopupMenu *file_options = nullptr;
 	String editing;

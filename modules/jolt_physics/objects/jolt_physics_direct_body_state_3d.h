@@ -115,5 +115,5 @@ public:
 
 	virtual void integrate_forces() override;
 
-	virtual RequiredResult<PhysicsDirectSpaceState3D> get_space_state() override;
+	virtual PhysicsDirectSpaceState3D *get_space_state() override;
 };

@@ -34,16 +34,14 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif
 
 // Export macros for DLL visibility
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #define LIBGODOT_API __declspec(dllexport)
 #elif defined(__GNUC__) || defined(__clang__)
 #define LIBGODOT_API __attribute__((visibility("default")))
-#else
-#define LIBGODOT_API
-#endif
+#endif // if defined(_MSC_VER)
 
 /**
  * @name libgodot_create_godot_instance
@@ -72,4 +70,4 @@ LIBGODOT_API void libgodot_destroy_godot_instance(GDExtensionObjectPtr p_godot_i
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif

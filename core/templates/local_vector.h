@@ -193,8 +193,7 @@ public:
 	/// Resize and set all values to 0 / false / nullptr.
 	_FORCE_INLINE_ void resize_initialized(U p_size) { _resize<true>(p_size); }
 
-	/// Resize and keep memory uninitialized.
-	/// This means that any newly added elements have an unknown value, and are expected to be set after the `resize_uninitialized` call.
+	/// Resize and set all values to 0 / false / nullptr.
 	/// This is only available for trivially destructible types (otherwise, trivial resize might be UB).
 	_FORCE_INLINE_ void resize_uninitialized(U p_size) { _resize<false>(p_size); }
 

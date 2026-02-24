@@ -36,7 +36,6 @@
 #include "openxr_select_interaction_profile_dialog.h"
 
 #include "core/templates/hash_map.h"
-#include "editor/docks/editor_dock.h"
 #include "editor/editor_undo_redo_manager.h"
 #include "editor/plugins/editor_plugin.h"
 #include "scene/gui/box_container.h"
@@ -45,8 +44,8 @@
 #include "scene/gui/scroll_container.h"
 #include "scene/gui/tab_container.h"
 
-class OpenXRActionMapEditor : public EditorDock {
-	GDCLASS(OpenXRActionMapEditor, EditorDock);
+class OpenXRActionMapEditor : public VBoxContainer {
+	GDCLASS(OpenXRActionMapEditor, VBoxContainer);
 
 private:
 	static HashMap<String, String> interaction_profile_editors; // interaction profile path, interaction profile editor

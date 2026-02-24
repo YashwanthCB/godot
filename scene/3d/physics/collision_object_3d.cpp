@@ -608,9 +608,9 @@ Object *CollisionObject3D::shape_owner_get_owner(uint32_t p_owner) const {
 	return ObjectDB::get_instance(shapes[p_owner].owner_id);
 }
 
-void CollisionObject3D::shape_owner_add_shape(uint32_t p_owner, RequiredParam<Shape3D> rp_shape) {
+void CollisionObject3D::shape_owner_add_shape(uint32_t p_owner, const Ref<Shape3D> &p_shape) {
 	ERR_FAIL_COND(!shapes.has(p_owner));
-	EXTRACT_PARAM_OR_FAIL(p_shape, rp_shape);
+	ERR_FAIL_COND(p_shape.is_null());
 
 	ShapeData &sd = shapes[p_owner];
 	ShapeData::ShapeBase s;

@@ -297,9 +297,8 @@ public class GodotLib {
 
 	/**
 	 * Invoked when the screen orientation changes.
-	 * @param orientation the new screen orientation
 	 */
-	static native void onScreenRotationChange(int orientation);
+	static native void onScreenRotationChange();
 
 	/**
 	 * @return true if input must be dispatched from the render thread. If false, input is

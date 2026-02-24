@@ -41,6 +41,7 @@ class EditorSpinSlider : public Range {
 	String suffix;
 	int updown_offset = -1;
 	bool hover_updown = false;
+	bool mouse_hover = false;
 
 	TextureRect *grabber = nullptr;
 	int grabber_range = 1;
@@ -62,6 +63,7 @@ class EditorSpinSlider : public Range {
 	Vector2 grabbing_spinner_mouse_pos;
 	double pre_grab_value = 0.0;
 
+	Control *value_input_popup = nullptr;
 	LineEdit *value_input = nullptr;
 	uint64_t value_input_closed_frame = 0;
 	bool value_input_dirty = false;
@@ -83,7 +85,7 @@ private:
 	void _grab_end();
 
 	void _grabber_gui_input(const Ref<InputEvent> &p_event);
-	void _value_input_hidden();
+	void _value_input_closed();
 	void _value_input_submitted(const String &);
 	void _value_focus_exited();
 	void _value_input_gui_input(const Ref<InputEvent> &p_event);
@@ -91,7 +93,7 @@ private:
 	void _evaluate_input_text();
 
 	void _update_value_input_stylebox();
-	void _ensure_value_input();
+	void _ensure_input_popup();
 	void _draw_spin_slider();
 
 	struct ThemeCache {
@@ -109,8 +111,6 @@ protected:
 
 public:
 	String get_tooltip(const Point2 &p_pos) const override;
-
-	virtual Size2 get_minimum_size() const override;
 
 	String get_text_value() const;
 	void set_label(const String &p_label);
@@ -141,6 +141,7 @@ public:
 	void setup_and_show() { _focus_entered(); }
 	LineEdit *get_line_edit();
 
+	virtual Size2 get_minimum_size() const override;
 	EditorSpinSlider();
 };
 
